@@ -1,11 +1,33 @@
-var http = require('http');
+//crane
+var fs = require('fs');
+var stdin = process.openStdin();
 
-var arguments = process.argv.slice(2);
+var playerFile = null;
+var respond = null;
 
-http.createServer(function (req, res) {
-  res.writeHead(200, {'Content-Type': 'text/plain'});
-  var response = getMove();
-  res.end(response + ''); //must be a string
-}).listen(arguments[0], '127.0.0.1');
+stdin.on('data', function(line) {
+  line = line.toString().trim();
+  var lineSplit = line.split(' '); //get separator index
+  var command = null;
+  var data = null;
 
-console.log('Server running at http://localhost:' + arguments[0] + '/');
+  command = lineSplit[0];
+  if(lineSplit.length > 1) {
+    data = lineSplit[1];
+  }
+
+  if(command === 'filename') {
+    playerFile = data;
+    respond = require('../player/' + playerFile + '.js').respond;
+    console.log('filename 200');
+  } else if(command === 'player') {
+    //send response from player
+    if(respond) {
+      console.log('player 200 ' + respond(data));
+    } else {
+      console.log('player 400 player-not-initialized');
+    }
+  } else {
+    console.log(command + ' 400 unrecognized-command');
+  }
+});

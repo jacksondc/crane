@@ -1,10 +1,11 @@
-var Crane = require('./crane');
+var game = require('./crane');
+
+var arguments = process.argv.slice(2);
 
 /************
 *   GAME  *
 ************/
 
-var game = new Crane();
 var players = game.readAllPlayers(arguments);
 
 var firstPlayer = players[0];
@@ -28,8 +29,8 @@ function determineWinner(firstName, secondName, firstMove, secondMove) {
   } else if( (firstMove === "scissors" && secondMove == "paper") ||
     (firstMove === "rock" && secondMove == "scissors") ||
     (firstMove === "paper" && secondMove == "rock") ) {
-      return firstName + " wins!";
-    } else {
-      return secondName + " wins!";
-    }
+    return firstName + " wins!";
+  } else {
+    return secondName + " wins!";
   }
+}
