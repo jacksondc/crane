@@ -2,21 +2,21 @@ var game = require('./crane');
 
 var arguments = process.argv.slice(2);
 
-/************
-*   GAME  *
-************/
-
 var players = game.readAllPlayers(arguments);
 
-var firstPlayer = players[0];
-var secondPlayer = players[1];
-
-for(var i = 0; i < 3; i++) {
-  console.log('round ' + i);
-  var firstPlayerMove = firstPlayer.sendMessage('move');
-  var secondPlayerMove = secondPlayer.sendMessage('move');
-  console.log('player 1 moves ' + firstPlayerMove + ', player 2 moves ' + secondPlayerMove); //no data
-  console.log('winner: ' + determineWinner(firstPlayer.name, secondPlayer.name, firstPlayerMove, secondPlayerMove))
+//play every combination of matches!
+var count = 0;
+for(var i = 0; i < players.length; i++) {
+  for(var j = i; j < players.length; j++) {
+    if(i !== j) { //don't play a bot against itself
+      console.log('round ' + (++count) + ' - ' + players[i].getName() + ' vs '+ players[j].getName());
+      var firstPlayerMove = players[i].send('move');
+      var secondPlayerMove = players[j].send('move');
+      console.log('player 1 moves ' + firstPlayerMove + ', player 2 moves ' + secondPlayerMove); //no data
+      console.log('winner: ' + determineWinner(players[i].getName(), players[j].getName(), firstPlayerMove, secondPlayerMove));
+      console.log(''); //newline
+    }
+  }
 }
 
 function determineWinner(firstName, secondName, firstMove, secondMove) {

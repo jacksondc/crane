@@ -22,6 +22,10 @@ var Player = function(playerName, shell) {
   plyr.shell = shell;
   plyr.callbacks = [];
 
+  this.getName = function() {
+    return plyr.name;
+  }
+
   this.shell.stdout.on('data', function(res) {
     //console.log('received: "' + res + '"');
     res = res.toString().trim();
@@ -62,7 +66,7 @@ var Player = function(playerName, shell) {
   });
 
   //private - takes a command and optional data, and passes it on to the client (NOT the player)
-  this.sendRawMessage = function(command, data) {
+  this.sendRaw = function(command, data) {
     var fullMessage = command;
     if(data)
       fullMessage += ' ' + data;
@@ -91,18 +95,18 @@ var Player = function(playerName, shell) {
       }
 
       if(res)
-        return res.toString(); //because it isn't one (who knows why)
+        return res.toString().trim(); //because it isn't a string (who knows why)
   }
 
   //public - takes an object with required data string, and passes it on to the player (through the client)
-  this.sendMessage = function(data) {
+  this.send = function(data) {
     // TO IMPLEMENT LATER
     //data = encodeURIComponent(data);
-    return plyr.sendRawMessage("player", data);
+    return plyr.sendRaw("player", data);
   }
 
   //initialize - send over the name of the player
-  this.sendRawMessage('filename', this.name);
+  this.sendRaw('filename', this.name);
 }
 
 //crane
@@ -126,11 +130,11 @@ module.exports.readAllPlayers = function(manualPlayersList) {
     if(extension === "js") {
       command = "node";
       arguments.push("client/client.js");
-    } /* else if(extension === "py") {
+    } else if(extension === "py") {
       command = "python3"
       arguments.push("-u");
       arguments.push("client/client.py"); // -u to disable output buffering
-    } */ else if(extension === "class") {
+    } else if(extension === "class") {
       command = "java";
       arguments.push("-classpath");
       arguments.push("client:player:."); // client because it needs to be able to find the file we're executing,

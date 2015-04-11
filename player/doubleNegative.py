@@ -1,5 +1,7 @@
 def respond(command) :
     if(command == "move") :
-        return "paper"
+        return move
     else :
         return "err"
+
+move = "paper"

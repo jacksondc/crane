@@ -5,7 +5,7 @@ import java.net.*; //for URL
 import java.lang.reflect.*; //for method
 
 public class Client {
-  public static void log(String message) {
+  /*public static void log(String message) {
     try {
       PrintWriter writer = new PrintWriter("stupidjava-log.txt", "UTF-8");
       writer.println(message);
@@ -13,8 +13,7 @@ public class Client {
     } catch (Exception ex) {
       System.out.println("got exception " + ex);
     }
-  }
-
+  }*/
 
   public static void main(String[] args) {
     Scanner s = new Scanner(System.in);
@@ -38,7 +37,7 @@ public class Client {
 
         try {
           // Convert File to a URL
-          URL url = file.toURI().toURL();          // file:/c:/myclasses/
+          URL url = file.toURI().toURL();
           URL[] urls = new URL[]{url};
 
           // Create a new class loader with the directory
