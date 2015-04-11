@@ -110,11 +110,15 @@ A tad more verbose.
 # Writing a Client
 If you want to use a language that doesn't already have a client, you'll have to write your own. Here's the idea:
 
-1. All messages are sent through standard output and received through standard input.
-2. The first word (up to a space) of each message from the server is considered the command. Everything after that is data.
+1. The client is executed through the command line. All messages are sent through standard output and received through standard input.
+2. The first word (up to a space) of each message from the server is considered the command. Everything after that is data, which should be used differently depending on the command.
 3. Responses from the client come in this format: the first word is the same as the command received. The second word is a status code: 200 for okay, 400 for error. Anything after that is data, which will be sent back to the game component.
+4. All messages should get trimmed (whitespace removed from either side) before passed on to the player (the server separates messages on different lines, but the player should never see those.)
+5. Each client passes along messages from one player.
+6. The first message a client receives will have the command "filename", followed by the filename (without file extension) of its player. The client is in charge of somehow importing this file and calling its `respond()` method. For instance, the JavaScript file uses Node's require: `require('../player/' + playerFile + '.js')` (here, `playerFile` is the filename received from the server).
+7. All subsequent messages will have the command "player", possibly followed by data, which should be passed as arguments to the player's `respond()` method.
+
+Look at the existing clients to get a better feel for how they are implemented.
 
 # TODO
 - Add custom timeout option
-- Write up client spec
-- Write up internal API spec
