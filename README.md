@@ -115,10 +115,11 @@ If you want to use a language that doesn't already have a client, you'll have to
 3. Responses from the client come in this format: the first word is the same as the command received. The second word is a status code: 200 for okay, 400 for error. Anything after that is data, which will be sent back to the game component.
 4. All messages should get trimmed (whitespace removed from either side) before passed on to the player (the server separates messages on different lines, but the player should never see those.)
 5. Each client passes along messages from one player.
-6. The first message a client receives will have the command "filename", followed by the filename (without file extension) of its player. The client is in charge of somehow importing this file and calling its `respond()` method. For instance, the JavaScript file uses Node's require: `require('../player/' + playerFile + '.js')` (here, `playerFile` is the filename received from the server).
-7. All subsequent messages will have the command "player", possibly followed by data, which should be passed as arguments to the player's `respond()` method.
+6. The first message a client receives will have the command "filename", followed by the filename (without file extension) of its player. The client is in charge of somehow importing this file and calling its `respond()` method. For instance, the JavaScript file uses Node's require: `require('../player/' + playerFile + '.js')` (here, `playerFile` is the filename received from the server). The response should look like "filename 200" (no data is necessary).
+7. All subsequent messages will have the command "player", possibly followed by data, which should be passed as arguments to the player's `respond()` method. The response should look like "player 200 ", followed by whatever the player returned from that method.
 
-Look at the existing clients to get a better feel for how they are implemented.
+Look at the existing clients to get a better idea of how they are implemented.
 
 # TODO
 - Add custom timeout option
+- Escape newline characters
