@@ -9,6 +9,7 @@
   "author": "Jackson de Campos",
   "license": "ISC",
   "devDependencies": {
-    "deasync": "0.0.10"
+    "deasync": "0.0.10",
+    "nexe": "^0.3.7"
   }
 }
