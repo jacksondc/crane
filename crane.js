@@ -41,7 +41,7 @@ var Player = function(playerName, shell) {
       }
 
       if(status != 200) {
-        throw new Error('Error: client responded with status ' + status + ' and error ' + data + '.');
+        throw new Error('client responded with status ' + status + ' and error ' + data + '.');
       } else {
         if(plyr.callbacks.length > 0) { //we have to have a callback to send it to
           plyr.callbacks[plyr.callbacks.length-1](data);
@@ -82,12 +82,14 @@ var Player = function(playerName, shell) {
       //console.log(fullMessage);
       plyr.shell.stdin.write(fullMessage + "\n"); //newline to ensure it doesn't get buffered
 
-      setTimeout(function() {
-        if(!done) {
-          throw new Error('Player ' + plyr.name + ' timed out responding to ' + command + ' ' + data);
-          done = true;
-        }
-      }, TIMEOUT_LENGTH);
+      if(TIMEOUT_LENGTH > 0) { //otherwise no timeout
+          setTimeout(function() {
+            if(!done) {
+              throw new Error('Player ' + plyr.name + ' timed out responding to ' + command + ' ' + data);
+              done = true;
+            }
+          }, TIMEOUT_LENGTH);
+      }
 
       while(!done) { //wait for response
         deasync.runLoopOnce();
@@ -110,7 +112,15 @@ var Player = function(playerName, shell) {
 }
 
 //crane
-module.exports.readAllPlayers = function(manualPlayersList) {
+module.exports.setTimeoutLength = function(timeout) {
+    if(!isNaN(timeout) && isFinite(timeout) && timeout >= 0) {
+        TIMEOUT_LENGTH = timeout;
+    } else {
+        throw new Error('timeout not valid');
+    }
+}
+
+module.exports.readPlayers = function(manualPlayersList) {
   var rawPlayers;
   var players = [];
 
@@ -138,8 +148,8 @@ module.exports.readAllPlayers = function(manualPlayersList) {
       command = "java";
       arguments.push("-classpath");
       arguments.push("client:player:."); // client because it needs to be able to find the file we're executing,
-                                           // which is /client/Client.class. player so that it will find the player file,
-                                           // in /player. "." so that it will find the Player abstract class, which is in /.
+                                         // which is /client/Client.class. player so that it will find the player file,
+                                         // in /player. "." so that it will find the Player abstract class, which is in /.
       arguments.push("Client");
     }
     if(command) { //else not a player, so ignore

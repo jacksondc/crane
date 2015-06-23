@@ -1,8 +1,10 @@
 var game = require('./crane');
 
+game.setTimeoutLength(500);
+
 var arguments = process.argv.slice(2);
 
-var players = game.readAllPlayers(arguments);
+var players = game.readPlayers(arguments);
 
 //play every combination of matches!
 var count = 0;
