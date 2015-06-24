@@ -5,6 +5,7 @@
 var spawn = require('child_process').spawn;
 var deasync = require('deasync');
 var fs = require('fs');
+var path = require('path');
 
 var TIMEOUT_LENGTH = 1000; //milliseconds
 
@@ -127,7 +128,9 @@ module.exports.readPlayers = function(manualPlayersList) {
   if(manualPlayersList && manualPlayersList.length > 1) { //we need at least 2 players
     rawPlayers = manualPlayersList;
   } else {
-    rawPlayers = fs.readdirSync('player');
+                 // this is necessary (instead of just readdirSync('player'))
+                 // because nexe doesn't like me
+    rawPlayers = fs.readdirSync(path.resolve(__dirname, './player'));
   }
 
   for(var i = 0; i < rawPlayers.length; i++) {
@@ -159,3 +162,36 @@ module.exports.readPlayers = function(manualPlayersList) {
 
   return players;
 }
+
+function choose(set, number) {
+    //?
+}
+
+module.exports.play = function(callback, options) {
+    players = module.exports.readAllPlayers( options.players ? options.players : '' );
+    //for each combination of two players
+    combinations = choose(players, 2);
+    for(var i = 0; i < combinations.length; i++) {
+        callback(combinations);
+    }
+}
+
+/*   EXAMPLES
+   ============
+
+game.play(function(players) {
+    console.log('game between ' + players[0] + ' and ' + players[1]);
+});
+
+
+game.play(10, function(players) {
+    console.log('game between ' + players[0] + ' and ' + players[1]);
+});
+
+
+game.play(function(players) {
+    console.log('game between ' + players[0] + ' and ' + players[1]);
+}, {
+    count: 10,
+    players: ['p1', 'p2']
+});*/
