@@ -1,3 +1,4 @@
+# Other ignores go in .git/info/exclude
 node_modules
 .DS_Store
 __pycache__
