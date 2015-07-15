@@ -3,27 +3,32 @@ import threading
 import os
 
 respond = None
-#add the player directory so we can import our player file from it
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + '/player')
 
 for line in sys.stdin:
     lineSplit = line.strip().split(' ')
 
-    command = lineSplit[0]
+    messageId = lineSplit[0]
+    command = lineSplit[1]
     data = None
 
-    if(len(lineSplit) > 1) :
-        data = lineSplit[1]
+    if(len(lineSplit) > 2) :
+        data = lineSplit[2]
 
     if(command == 'filename') :
-        fileName = data
-        _temp = __import__( fileName, globals(), locals(), ['respond'], 0)
-        respond = _temp.respond
-        print('filename 200');
+        filePath = data + '.py'
+        directoryPath = os.path.dirname(filePath)
+        fileName = os.path.splitext(os.path.basename(filePath))[0]
+
+        #add the player directory so we can import our player file from it
+        sys.path.append(directoryPath)
+
+        player = __import__(fileName , globals(), locals(), ['respond'], 0)
+        respond = player.respond
+        print(messageId, '200');
     elif(command == 'player') :
         if(respond) :
-            print('player 200', respond(data))
+            print(messageId, '200', respond(data))
         else :
-            print('player 400 player-not-initialized')
+            print(messageId, '400', 'player-not-initialized')
     else :
-        print(command, '400', 'unrecognized-command');
+        print(messageId, '400', 'unrecognized-command', command);

@@ -14,32 +14,47 @@ function createContext(path, context) {
   return context;
 }
 
-stdin.on('data', function(line) {
-  line = line.toString().trim();
-  var lineSplit = line.split(' '); //get separator index
-  var command = null;
-  var data = null;
+function processLine(line) {
+    line = line.toString().trim();
+    var lineSplit = line.split(' '); //get separator index
+    var id = null;
+    var command = null;
+    var data = null;
 
-  command = lineSplit[0];
-  if(lineSplit.length > 1) {
-    data = lineSplit[1];
-  }
-
-  if(command === 'filename') {
-    playerFile = data;
-    // __filename is the current file name, necessary because just '.' refers to the directory where the script was
-    // executed from. The first '..' in '../player' goes up a level to current directory (from filename), and the
-    // second one goes to '../..'
-    respond = createContext(path.resolve(__filename, '../../player', playerFile + '.js')).respond; //require('../player/' + playerFile + '.js').respond;
-    console.log('filename 200');
-  } else if(command === 'player') {
-    //send response from player
-    if(respond) {
-      console.log('player 200 ' + respond(data));
-    } else {
-      console.log('player 400 player-not-initialized');
+    id = lineSplit[0];
+    command = lineSplit[1];
+    if(lineSplit.length > 2) {
+      data = lineSplit[2];
     }
-  } else {
-    console.log(command + ' 400 unrecognized-command');
+
+    if(command === 'filename') {
+      playerFile = data + '.js';
+      try {
+          respond = createContext(path.resolve(playerFile)).respond;
+          if(!respond) {
+              throw new Error();
+          }
+          console.log(id + ' 200');
+      } catch(ex) {
+          console.log(id + ' 400 could not find file ' + playerFile);
+      }
+    } else if(command === 'player') {
+      //send response from player
+      if(respond) {
+        console.log(id + ' 200 ' + respond(data));
+      } else {
+        console.log(id + ' 400 player-not-initialized');
+      }
+    } else {
+      console.log(id + ' ' + ' 400 unrecognized-command ' + command);
+    }
+}
+
+stdin.on('data', function(text) {
+  lines = text.toString().split('\n');
+  for(var i = 0; i < lines.length; i++) {
+      if(lines[i].length > 0) {
+          processLine(lines[i]);
+      }
   }
 });
