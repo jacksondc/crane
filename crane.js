@@ -1,11 +1,18 @@
-/************
- *   CRANE  *
- ************/
+/*************
+ *   CRANE   *
+ *************/
 
-var spawn = require('child_process').spawn;
-var deasync = require('deasync');
-var fs = require('fs');
-var path = require('path');
+var spawn = require('child_process').spawn,
+    fs    = require('fs'),
+    path  = require('path'),
+    uuid  = require('node-uuid'),
+    async = require('async');
+
+var playerDirectory = path.resolve(path.dirname(require.main.filename), './players');
+
+module.exports.setPlayersDirectory = function(filename) {
+    playerDirectory = filename;
+}
 
 var TIMEOUT_LENGTH = 1000; //milliseconds
 
@@ -16,49 +23,66 @@ var TIMEOUT_LENGTH = 1000; //milliseconds
 //controller receives: first word is return command, second is status, third is data
 
 var Player = function(playerName, shell) {
-  var plyr = this;
+  var pl = this;
 
-  //console.log("new player with name " + name + " shell " + shell);
-  plyr.name = playerName;
-  plyr.shell = shell;
-  plyr.callbacks = [];
+  pl.name = playerName;
+  pl.shell = shell;
+  pl.messageTable = [];
+  pl.initialized = false;
 
   this.getName = function() {
-    return plyr.name;
+    return pl.name;
   }
 
   this.shell.stdout.on('data', function(res) {
-    //console.log('received: "' + res + '"');
-    res = res.toString().trim();
-    if(res.length > 0) {
-      var dataSplit = res.split(' ');
-      if(dataSplit.length < 2)
-        throw new Error('client response from ' + playerName + ' invalid: ' + res);
-      var command = dataSplit[0]; //TODO: check to see if command lines up with callback
-      var status = dataSplit[1];
-      var data;
-      if(dataSplit.length >= 3) {
-        data = dataSplit[2];
-      }
+    //console.log('received ' + res + ' from ' + pl.getName());
 
-      if(status != 200) {
-        throw new Error('client responded with status ' + status + ' and error ' + data + '.');
-      } else {
-        if(plyr.callbacks.length > 0) { //we have to have a callback to send it to
-          plyr.callbacks[plyr.callbacks.length-1](data);
-        }
-      }
+    res = res.toString().trim();
+
+    var lines = res.split('\n');
+
+    for(var i = 0; i < lines.length; i++) {
+        processOutput(lines[i]);
     }
   });
 
+  function processOutput(res) {
+      if(res.length > 0) {
+
+        var dataSplit = res.split(' ');
+
+        if(dataSplit.length < 2) {
+          throw new Error('client response from ' + pl.getName() + ' too short: ' + res);
+        }
+
+        var messageId = dataSplit[0];
+        var status    = dataSplit[1];
+        var data      = dataSplit.length >= 3 ? dataSplit.slice(2).join(' ') : null;
+
+        if(!pl.messageTable[messageId]) {
+            throw new Error('client response from ' + pl.getName() + ' with unrecognized message id ' + messageId);
+        }
+
+        pl.messageTable[messageId].done = true;
+
+        if(parseInt(status) === 200) {
+            var callback = pl.messageTable[messageId].callback;
+            if(callback) { callback(data); }
+        } else {
+            throw new Error('client response from ' + pl.getName() + ' with status ' + status + ' and error ' + data + '.');
+        }
+
+      }
+  }
+
   //err
   this.shell.stderr.on('data', function(data) {
-    console.log('Help in aisle ' + plyr.name + ': ' + data);
+    throw new Error('Error from player ' + pl.getName() + ': ' + data);
   });
 
   //close
   this.shell.on('close', function(code) {
-    console.log('closing code: ' + code);
+    console.log('Player ' + pl.getName() + ' closing with code: ' + code);
   });
 
   //end
@@ -66,50 +90,56 @@ var Player = function(playerName, shell) {
     process.stdout.end();
   });
 
-  //private - takes a command and optional data, and passes it on to the client (NOT the player)
-  this.sendRaw = function(command, data) {
-    var fullMessage = command;
-    if(data)
-      fullMessage += ' ' + data;
+  //private - takes a command and data, passes it on to the client
+  function sendRaw(command, data, cb) {
 
-      var done = false;
-      var res = null;
+      var messageId = uuid.v1();
+      var messageString = [messageId, command, data].join(' ');
 
-      plyr.callbacks.push(function(returnData) {
-        res = returnData;
-        done = true;
-      });
+      pl.messageTable[messageId] = {
+              callback: cb,
+              message: messageString,
+              done: false
+          };
 
-      //console.log(fullMessage);
-      plyr.shell.stdin.write(fullMessage + "\n"); //newline to ensure it doesn't get buffered
+      pl.shell.stdin.write(messageString + "\n"); //newline to ensure it doesn't get buffered
 
       if(TIMEOUT_LENGTH > 0) { //otherwise no timeout
-          setTimeout(function() {
-            if(!done) {
-              throw new Error('Player ' + plyr.name + ' timed out responding to ' + command + ' ' + data);
-              done = true;
-            }
-          }, TIMEOUT_LENGTH);
+        setTimeout(function() {
+          if(!pl.messageTable[messageId].done) {
+            throw new Error('Player ' + pl.name + ' timed out responding to ' + messageString);
+            pl.messageTable[messageId].done = true;
+          }
+        }, TIMEOUT_LENGTH);
       }
 
-      while(!done) { //wait for response
-        deasync.runLoopOnce();
-        //debugger;
-      }
-
-      if(res)
-        return res.toString().trim(); //because it isn't a string (who knows why)
   }
 
   //public - takes an object with required data string, and passes it on to the player (through the client)
-  this.send = function(data) {
-    // TO IMPLEMENT LATER
-    //data = encodeURIComponent(data);
-    return plyr.sendRaw("player", data);
+  this.send = function(data, callback) {
+      async.series([
+        //first send over filename if necessary
+        function(cb) {
+            if(!pl.initialized) {
+                //initialize player object - send over the name of the player
+                sendRaw('filename', path.resolve(playerDirectory, pl.getName()), function(data) {
+                  pl.initialized = true;
+                  cb(null);
+                });
+            } else {
+                cb(null);
+            }
+        },
+        //then send actual message
+        function(cb) {
+            // TO IMPLEMENT LATER
+            // data = encodeURIComponent(data);
+            sendRaw("player", data, callback);
+            cb(null);
+        }
+    ]);
   }
 
-  //initialize - send over the name of the player
-  this.sendRaw('filename', this.name);
 }
 
 //crane
@@ -125,12 +155,10 @@ module.exports.readPlayers = function(manualPlayersList) {
   var rawPlayers;
   var players = [];
 
-  if(manualPlayersList && manualPlayersList.length > 1) { //we need at least 2 players
+  if(manualPlayersList && manualPlayersList.length > 0) { //we need at least 1 player
     rawPlayers = manualPlayersList;
   } else {
-                 // this is necessary (instead of just readdirSync('player'))
-                 // because nexe doesn't like me
-    rawPlayers = fs.readdirSync(path.resolve(__dirname, './player'));
+    rawPlayers = fs.readdirSync(playerDirectory);
   }
 
   for(var i = 0; i < rawPlayers.length; i++) {
@@ -156,7 +184,7 @@ module.exports.readPlayers = function(manualPlayersList) {
       arguments.push("Client");
     }
     if(command) { //else not a player, so ignore
-      players.push( new Player(shortFile, spawn(command, arguments) ) );
+      players.push( new Player(shortFile, spawn(command, arguments, {cwd: __dirname}) ) );
     }
   }
 
@@ -174,7 +202,25 @@ module.exports.play = function(callback, options) {
     for(var i = 0; i < combinations.length; i++) {
         callback(combinations);
     }
-}
+};
+
+module.exports.playAllMatches = function(players, numPlayers, eachMatch, callback) {
+
+    var index = 0;
+    var matches = [];
+    for(var i = 0; i < players.length; i++) {
+      for(var j = i; j < players.length; j++) {
+        if(i !== j) { //don't play a bot against itself
+            matches.push({
+                players: [players[i], players[j]],
+                index: ++index
+            });
+        }
+      }
+    }
+
+    async.eachSeries(matches, eachMatch, callback);
+};
 
 /*   EXAMPLES
    ============
