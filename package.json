@@ -7,9 +7,10 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Jackson de Campos",
-  "license": "ISC",
   "devDependencies": {
+    "async": "^1.3.0",
     "deasync": "0.0.10",
-    "nexe": "^0.3.8"
+    "nexe": "^0.3.8",
+    "node-uuid": "^1.4.3"
   }
 }
