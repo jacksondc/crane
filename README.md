@@ -1,7 +1,7 @@
 # Overview
 Crane is a toolkit for writing games for AI players. It provides an API to communicate between a game written in JavaScript and players written in other languages.
 
-**Version -1**.
+**Version -1.**
 
 # Quick start
 ##Player
