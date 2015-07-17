@@ -1,124 +1,88 @@
 # Overview
-Crane solves some common problems in writing games for AI players, ideally for small games and short competitions. It provides an API to communicate between a game and its players.
+Crane is a toolkit for writing games for AI players. It provides an API to communicate between a game written in JavaScript and players written in other languages.
 
-**Version:** -1.
+**Version -1**.
 
-# Game
-The game logic is specific to a game and must (at the moment) be written in JavaScript. Run this file to run the whole simulation. For instance, here's a demo with rock paper scissors:
-
-```js
-var game = require('./crane');
-
-var arguments = process.argv.slice(2);
-
-var players = game.readPlayers(arguments);
-
-//play every combination of matches
-var count = 0;
-for(var i = 0; i < players.length; i++) {
-  for(var j = i; j < players.length; j++) {
-    if(i !== j) { //don't play a bot against itself
-      console.log('round ' + (++count) + ' - ' + players[i].getName() + ' vs '+ players[j].getName());
-      var firstPlayerMove = players[i].send('move');
-      var secondPlayerMove = players[j].send('move');
-      console.log('player 1 moves ' + firstPlayerMove + ', player 2 moves ' + secondPlayerMove); //no data
-      console.log('winner: ' + determineWinner(players[i].getName(), players[j].getName(), firstPlayerMove, secondPlayerMove));
-      console.log(''); //newline
-    }
-  }
-}
-
-function determineWinner(firstName, secondName, firstMove, secondMove) {
-  firstMove = firstMove.trim().toLowerCase();
-  secondMove = secondMove.trim().toLowerCase();
-
-  if(firstMove === secondMove) {
-    return "tie";
-  } else if( (firstMove === "scissors" && secondMove == "paper") ||
-    (firstMove === "rock" && secondMove == "scissors") ||
-    (firstMove === "paper" && secondMove == "rock") ) {
-      return firstName + " wins!";
-  } else {
-    return secondName + " wins!";
-  }
-}
-```
-
-The important parts:
-
-1. Import crane with `require('./crane');`
-2. Use `readPlayers()` to get player objects. If a list of file names in the `/player` directory is provided as the first argument, it will only load those players. Otherwise it will load all players in the `/player` directory.
-3. For each player object, call `send()` to synchronously get data from that player.
-
-##Settings
-There's only one optional setting right now, `setTimeoutLength()`, which accepts a number of milliseconds after which Crane will stop listening for a player response and throw an error (defaults to 1000). The rock paper scissors game could use it like this:
+# Quick start
+##Player
+Put players in the `/players` directory. Each player must define the method `respond`, which takes a string command and returns a string response:
 
 ```js
-game.setTimeoutLength(500);
-```
-
-# Player
-In the /client directory (which you shouldn't have to touch) are clients written in different languages - currently Java, Python (3, although 2 might work too - I'm not sure), and JavaScript. When reading in players from the /player directory, Crane will choose a client to use for that player based on its file extension.
-
-Player files will vary slightly based on the language. The basic idea is (A) they should be as short and simple as possible, (B) they should be able to retain state across rounds, and (C) the only required method is the `respond()` method.
-
-Here are examples of players for the rock paper scissors game:
-
-##JavaScript
-```js
-//initialize things here if necessary
-var move = "rock";
-
 function respond(command) {
   if(command === "move")
-    return move;
+    return "rock";
   else
     return "err";
 }
 ```
 
-##Python
-```py
-move = "rock"
+Crane currently supports players written in Python 3, JavaScript, and Java. For other languages, you'll need to [write a client](#Writing-a-client).
 
-def respond(command) :
-    if(command == "move") :
-        return move
-    else :
-        return "err"
+##Game
+Put `crane.js` in the same folder as your game, then require it:
+
+```js
+var crane = require('./crane');
+
 ```
 
-##Java
-```java
-public class JavaPlayer {
-    public String move = "";
+Call `readPlayers` to get a list of all players:
 
-    public String respond(String command) {
-        if(command.equals("move")) {
-            return move;
-        } else {
-            return "err";
-        }
-    }
+```js
+var players = crane.readPlayers();
+```
 
-    public JavaPlayer() {
-        move = "scissors";
-    }
+Communicate with players using `send`:
+
+```js
+var playerMove = players[0].send('move'); //rock
+```
+
+For a full example, see the [rock paper scissors](https://github.com/jacksondc/crane/tree/master/examples/rps) game.
+
+#Game API
+##readPlayers([players])
+Returns an array of `Player` objects corresponding to files in the `/players` directory. Players not written in Python 3, JavaScript, or Java (specifically, files with extensions other than `.py`, `.js` or `.class`) will be ignored. To receive players only for specific objects, pass in their filenames as an array.
+
+```js
+crane.readPlayers(['python-player.py', 'js-player.js']); //only pick these two players
+```
+
+##setTimoutLength(length)
+Sets the amount of time, in milliseconds, that Crane will wait for player responses before throwing an error. Defaults to 1000.
+
+```js
+crane.setTimeoutLength(500); //wait half a second for responses
+```
+
+##Player.send(message)
+Accepts a string message, which will be passed into the player's `respond` method as its only argument. Returns a string message returned by the `respond` method.
+
+```js
+var response = player.send("move")
+```
+
+Messages are passed through stdin/stdout and aren't sanitized at all. Special characters or newlines will likely mess everything up. Whitespace is preserved as long as it doesn't start or end the message.
+
+#Player API
+A player only needs to implement one method, `respond`, which accepts a single string argument, a message from the game, and returns a string to the game.  Full examples of players written in all supported languages can be found in the [rock paper scissors](https://github.com/jacksondc/crane/tree/master/examples/rps/players) game.
+
+```js
+function respond(message) {
+  return "response";
 }
 ```
 
 # Writing a Client
-If you want to use a language that doesn't already have a client, you'll have to write your own. Here's the idea:
+If you want to use a language that doesn't already have a client, you'll have to write your own. Here's the general framework:
 
-1. The client is executed through the command line. All messages are sent through standard output and received through standard input.
-2. The first word (up to a space) of each message from the server is considered the command. Everything after that is data, which should be used differently depending on the command.
-3. Responses from the client come in this format: the first word is the same as the command received. The second word is a status code: 200 for okay, 400 for error. Anything after that is data, which will be sent back to the game component.
-4. All messages should get trimmed (whitespace removed from either side) before passed on to the player (the server separates messages on different lines, but the player should never see those.)
-5. Each client passes along messages from one player.
-6. The first message a client receives will have the command "filename", followed by the filename (without file extension) of its player. The client is in charge of somehow importing this file and calling its `respond()` method. For instance, the JavaScript file uses Node's require: `require('../player/' + playerFile + '.js')` (here, `playerFile` is the filename received from the server). The response should look like "filename 200" (no data is necessary).
-7. All subsequent messages will have the command "player", possibly followed by data, which should be passed as arguments to the player's `respond()` method. The response should look like "player 200 ", followed by whatever the player returned from that method.
+1. A new client is initialized for each player, so the same client might be running multiple times at once.
+2. The client is executed through the command line. All messages are sent through standard output and received through standard input.
+3. Each line is considered a message. If multiple lines are received at once, split them before processing.
+4. The first word (up to a space) of each message from the server is a unique message ID. The second word is a command. Anything after that is data.
+5. The first word of every response from the client is the same message ID. The second word is a status code: 200 for okay, 400 for error. Anything after that is data, which will be sent back to the game.
+6. There are two valid commands:
+  1. **filename**: the first message a client receives will have the command "filename", followed by the filename (without file extension) of its player. The client must then import this file and calling its `respond()` method. The response should look like "filename 200" (no data is necessary).
+  2. **player**: All subsequent messages will have the command "player", possibly followed by data. Data should be passed as an argument to the player's `respond()` method. Before sending data to the player, remove whitespace (especially newlines) from either side. Whatever `respond()` returns should be data in the client's response to the game.
 
-Look at the existing clients to get a better idea of how they are implemented.
-
-# To Do
-- Escape newline characters
+Look at the existing [clients](https://github.com/jacksondc/crane/tree/master/client) to get a better idea of how they are implemented.
