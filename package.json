@@ -9,7 +9,6 @@
   "author": "Jackson de Campos",
   "devDependencies": {
     "async": "^1.3.0",
-    "deasync": "0.0.10",
     "nexe": "^0.3.8",
     "node-uuid": "^1.4.3"
   }
