@@ -29,7 +29,7 @@ public class Client {
       id        = input[0];
       command   = input[1];
       if(input.length > 2) {
-        data    = input[2];
+        data    = String.join(" ", Arrays.copyOfRange(input, 2, input.length));
       }
 
       if(command.equals("filename")) {

@@ -12,7 +12,7 @@ for line in sys.stdin:
     data = None
 
     if(len(lineSplit) > 2) :
-        data = lineSplit[2]
+        data = ' '.join(lineSplit[2:])
 
     if(command == 'filename') :
         filePath = data + '.py'

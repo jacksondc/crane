@@ -24,7 +24,7 @@ function processLine(line) {
     id = lineSplit[0];
     command = lineSplit[1];
     if(lineSplit.length > 2) {
-      data = lineSplit[2];
+      data = lineSplit.slice(2).join(' ');
     }
 
     if(command === 'filename') {
