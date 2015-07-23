@@ -42,7 +42,7 @@ For a full example, see the [rock paper scissors](https://github.com/jacksondc/c
 
 #Game API
 ##readPlayers([players])
-Returns an array of `Player` objects corresponding to files in the `/players` directory. Players not written in Python 3, JavaScript, or Java (specifically, files with extensions other than `.py`, `.js` or `.class`) will be ignored. To receive players only for specific objects, pass in their filenames as an array.
+Returns an array of `Player` objects corresponding to files in the `/players` directory. Players not written in supported languages will be ignored. To receive players only for specific objects, pass in their filenames as an array.
 
 ```js
 crane.readPlayers(['python-player.py', 'js-player.js']); //only pick these two players
@@ -72,6 +72,9 @@ function respond(message) {
   return "response";
 }
 ```
+
+#Language Notes
+Crane currently has clients for Python 3, JavaScript, and Java (it will recognize files with the extensions `.py`, `.js` and `.class`.) It assumes python is accessible with `python3`, node with `node`, and Java with `java`.
 
 # Writing a Client
 If you want to use a language that doesn't already have a client, you'll have to write your own. Here's the general framework:
