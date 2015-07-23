@@ -4,8 +4,43 @@ var fs = require('fs');
 var path = require('path');
 var stdin = process.openStdin();
 
-var playerFile = null;
 var respond = null;
+var success = true;
+
+try {
+   var playerFile = process.argv[2] + '.js';
+} catch(ex) {
+  success = false;
+  console.log('err received no filepath argument');
+}
+
+if(success) {
+  try {
+    var player = createContext(path.resolve(playerFile));
+  } catch(ex) {
+    success = false;
+    console.log('err received invalid filepath ' + process.argv[2]);
+  }
+}
+
+if(success) {
+  respond = player.respond;
+  if(!respond) {
+    success = false;
+    console.log('err player had no respond method');
+  }
+}
+
+if(success) {
+  stdin.on('data', function(text) {
+    lines = text.toString().split('\n');
+    for(var i = 0; i < lines.length; i++) {
+        if(lines[i].length > 0) {
+            processLine(lines[i]);
+        }
+    }
+  });
+}
 
 function createContext(path, context) {
   context = context || {};
@@ -27,18 +62,7 @@ function processLine(line) {
       data = lineSplit.slice(2).join(' ');
     }
 
-    if(command === 'filename') {
-      playerFile = data + '.js';
-      try {
-          respond = createContext(path.resolve(playerFile)).respond;
-          if(!respond) {
-              throw new Error();
-          }
-          console.log(id + ' 200');
-      } catch(ex) {
-          console.log(id + ' 400 could not find file ' + playerFile);
-      }
-    } else if(command === 'player') {
+    if(command === 'player') {
       //send response from player
       if(respond) {
         console.log(id + ' 200 ' + respond(data));
@@ -49,12 +73,3 @@ function processLine(line) {
       console.log(id + ' ' + ' 400 unrecognized-command ' + command);
     }
 }
-
-stdin.on('data', function(text) {
-  lines = text.toString().split('\n');
-  for(var i = 0; i < lines.length; i++) {
-      if(lines[i].length > 0) {
-          processLine(lines[i]);
-      }
-  }
-});

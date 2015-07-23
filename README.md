@@ -78,11 +78,11 @@ If you want to use a language that doesn't already have a client, you'll have to
 
 1. A new client is initialized for each player, so the same client might be running multiple times at once.
 2. The client is executed through the command line. All messages are sent through standard output and received through standard input.
+3. The client will receive one argument, the filename (without file extension) of its player. The client must then import this file and find its `respond` method.
 3. Each line is considered a message. If multiple lines are received at once, split them before processing.
 4. The first word (up to a space) of each message from the server is a unique message ID. The second word is a command. Anything after that is data.
 5. The first word of every response from the client is the same message ID. The second word is a status code: 200 for okay, 400 for error. Anything after that is data, which will be sent back to the game.
-6. There are two valid commands:
-  1. **filename**: the first message a client receives will have the command "filename", followed by the filename (without file extension) of its player. The client must then import this file and calling its `respond()` method. The response should look like "filename 200" (no data is necessary).
-  2. **player**: All subsequent messages will have the command "player", possibly followed by data. Data should be passed as an argument to the player's `respond()` method. Before sending data to the player, remove whitespace (especially newlines) from either side. Whatever `respond()` returns should be data in the client's response to the game.
+6. There is (currently) only one valid command, player, which may be followed by data. If there is data, it should be passed as an argument to the player's `respond()` method. Before sending data to the player, remove whitespace (especially newlines) from either side. Whatever `respond()` returns should be data in the client's response to the game.
+7. Clients can also send messages that are not responses to server messages, by replacing the first token (normally the id) with 'err' or 'log' (depending on the type of message). This is useful for debugging or for errors finding the player file before the first message arrives.
 
-Look at the existing [clients](https://github.com/jacksondc/crane/tree/master/client) to get a better idea of how they are implemented.
+Look at the existing [clients](https://github.com/jacksondc/crane/tree/master/client) for more implementation specifics.

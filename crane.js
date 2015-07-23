@@ -29,15 +29,16 @@ var Player = function(playerName, shell) {
   pl.name = playerName;
   pl.shell = shell;
   pl.messageTable = [];
-  pl.initialized = false;
 
   this.getName = function() {
     return pl.name;
   }
 
   this.shell.stdout.on('data', function(res) {
-    if(res.toString().startsWith('log ')) {
-      console.log('Log from player: ' + res.toString().substr(4));
+    if(res.toString().substr(0, 4) === 'log ') {
+      console.log('Log from client ' + pl.getName() + ': ' + res.toString().substr(4));
+    } else if(res.toString().substr(0, 4) === 'err ') {
+      throw new Error('Error from client ' + pl.getName() + ': ' + res.toString().substr(4));
     } else {
       res = res.toString().trim();
 
@@ -46,14 +47,6 @@ var Player = function(playerName, shell) {
       for(var i = 0; i < lines.length; i++) {
           processOutput(lines[i]);
       }
-    }
-
-    res = res.toString().trim();
-
-    var lines = res.split('\n');
-
-    for(var i = 0; i < lines.length; i++) {
-        processOutput(lines[i]);
     }
   });
 
@@ -128,27 +121,7 @@ var Player = function(playerName, shell) {
 
   //public - takes an object with required data string, and passes it on to the player (through the client)
   this.send = function(data, callback) {
-      async.series([
-        //first send over filename if necessary
-        function(cb) {
-            if(!pl.initialized) {
-                //initialize player object - send over the name of the player
-                sendRaw('filename', path.resolve(playerDirectory, pl.getName()), function(data) {
-                  pl.initialized = true;
-                  cb(null);
-                });
-            } else {
-                cb(null);
-            }
-        },
-        //then send actual message
-        function(cb) {
-            // TO IMPLEMENT LATER
-            // data = encodeURIComponent(data);
-            sendRaw("player", data, callback);
-            cb(null);
-        }
-    ]);
+      sendRaw("player", data, callback);
   }
 
 }
@@ -174,28 +147,32 @@ module.exports.readPlayers = function(manualPlayersList) {
 
   for(var i = 0; i < rawPlayers.length; i++) {
     var fullFile = rawPlayers[i];
-    var components = fullFile.toString().split('.'); //0: filename, 1: file extension
-    var shortFile = components[0];
-    var extension = components[1];
+    var dot = fullFile.lastIndexOf('.');
+
+    var shortName = fullFile.substring(0, dot); //e.g. player-1
+    var filePathNoExtension = playerDirectory + '/' + shortName //e.g. players/player-1
+    var extension = fullFile.substring(dot+1); //eg js
+
     var command = "";
     var args = [];
+
     if(extension === "js") {
       command = "node";
       args.push("client/client.js");
+      args.push(filePathNoExtension)
     } else if(extension === "py") {
       command = "python3"
       args.push("-u");
       args.push("client/client.py"); // -u to disable output buffering
+      args.push(filePathNoExtension)
     } else if(extension === "class") {
       command = "java";
-      args.push("-classpath");
-      args.push("client:player:."); // client because it needs to be able to find the file we're executing,
-                                         // which is /client/Client.class. player so that it will find the player file,
-                                         // in /player. "." so that it will find the Player abstract class, which is in /.
+      args.push("-classpath"); args.push("client");
       args.push("Client");
+      args.push(filePathNoExtension)
     }
     if(command) { //else not a player, so ignore
-      players.push( new Player(shortFile, spawn(command, args, {cwd: __dirname}) ) );
+      players.push( new Player(shortName, spawn(command, args, {cwd: __dirname}) ) );
     }
   }
 
