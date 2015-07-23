@@ -6,7 +6,8 @@ var spawn = require('child_process').spawn,
     fs    = require('fs'),
     path  = require('path'),
     uuid  = require('node-uuid'),
-    async = require('async');
+    async = require('async'),
+    _     = require('lodash');
 
 var playerDirectory = path.resolve(path.dirname(require.main.filename), './players');
 
@@ -35,7 +36,17 @@ var Player = function(playerName, shell) {
   }
 
   this.shell.stdout.on('data', function(res) {
-    //console.log('received ' + res + ' from ' + pl.getName());
+    if(res.toString().startsWith('log ')) {
+      console.log('Log from player: ' + res.toString().substr(4));
+    } else {
+      res = res.toString().trim();
+
+      var lines = res.split('\n');
+
+      for(var i = 0; i < lines.length; i++) {
+          processOutput(lines[i]);
+      }
+    }
 
     res = res.toString().trim();
 
@@ -167,24 +178,24 @@ module.exports.readPlayers = function(manualPlayersList) {
     var shortFile = components[0];
     var extension = components[1];
     var command = "";
-    var arguments = [];
+    var args = [];
     if(extension === "js") {
       command = "node";
-      arguments.push("client/client.js");
+      args.push("client/client.js");
     } else if(extension === "py") {
       command = "python3"
-      arguments.push("-u");
-      arguments.push("client/client.py"); // -u to disable output buffering
+      args.push("-u");
+      args.push("client/client.py"); // -u to disable output buffering
     } else if(extension === "class") {
       command = "java";
-      arguments.push("-classpath");
-      arguments.push("client:player:."); // client because it needs to be able to find the file we're executing,
+      args.push("-classpath");
+      args.push("client:player:."); // client because it needs to be able to find the file we're executing,
                                          // which is /client/Client.class. player so that it will find the player file,
                                          // in /player. "." so that it will find the Player abstract class, which is in /.
-      arguments.push("Client");
+      args.push("Client");
     }
     if(command) { //else not a player, so ignore
-      players.push( new Player(shortFile, spawn(command, arguments, {cwd: __dirname}) ) );
+      players.push( new Player(shortFile, spawn(command, args, {cwd: __dirname}) ) );
     }
   }
 
@@ -204,15 +215,14 @@ module.exports.play = function(callback, options) {
     }
 };
 
-module.exports.playAllMatches = function(players, numPlayers, eachMatch, callback) {
-
+module.exports.playAllMatches = function(players, numMatches, eachMatch, callback) {
     var index = 0;
     var matches = [];
     for(var i = 0; i < players.length; i++) {
       for(var j = i; j < players.length; j++) {
         if(i !== j) { //don't play a bot against itself
             matches.push({
-                players: [players[i], players[j]],
+                players: _.shuffle([players[i], players[j]]),
                 index: ++index
             });
         }
@@ -222,22 +232,15 @@ module.exports.playAllMatches = function(players, numPlayers, eachMatch, callbac
     async.eachSeries(matches, eachMatch, callback);
 };
 
-/*   EXAMPLES
-   ============
+function getBaseLog(x, y) {
+  return Math.log(y) / Math.log(x);
+}
 
-game.play(function(players) {
-    console.log('game between ' + players[0] + ' and ' + players[1]);
-});
+function nearestTwo(x) {
+  return Math.pow(2,Math.ceil(getBaseLog(2, x)));
+}
 
-
-game.play(10, function(players) {
-    console.log('game between ' + players[0] + ' and ' + players[1]);
-});
-
-
-game.play(function(players) {
-    console.log('game between ' + players[0] + ' and ' + players[1]);
-}, {
-    count: 10,
-    players: ['p1', 'p2']
-});*/
+module.exports.playTournament = function(players) {
+  var size = nearestTwo(players.length);
+  var numByes = size - players.length;
+};

@@ -54,6 +54,6 @@ function playMatch(match, done) {
 }
 
 //start it off
-game.playAllMatches(players, 2, playMatch, function() {
+game.playAllMatches(players, 1, playMatch, function() {
     console.log('All done!');
 });

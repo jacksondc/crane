@@ -1,15 +1,12 @@
 {
-  "name": "crane",
-  "version": "0.0.1",
+  "name": "@jacksondc/crane",
+  "version": "0.1.0",
   "description": "",
   "main": "crane.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "author": "Jackson de Campos",
-  "devDependencies": {
+  "dependencies": {
     "async": "^1.3.0",
-    "nexe": "^0.3.8",
+    "lodash": "^3.10.0",
     "node-uuid": "^1.4.3"
   }
 }
