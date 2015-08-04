@@ -19,10 +19,16 @@ function respond(command) {
 Crane currently supports players written in Python 3, JavaScript, and Java. For other languages, you'll need to [write a client](#writing-a-client).
 
 ##Game
-Put `crane.js` in the same folder as your game, then require it:
+Install with npm:
+
+```
+npm install --save @jacksondc/crane
+```
+
+Require:
 
 ```js
-var crane = require('./crane');
+var crane = require('@jacksondc/crane');
 
 ```
 
