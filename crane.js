@@ -89,11 +89,6 @@ var Player = function(playerName, shell) {
     console.log('Player ' + pl.getName() + ' closing with code: ' + code);
   });
 
-  //end
-  this.shell.on('end', function() {
-    process.stdout.end();
-  });
-
   //private - takes a command and data, passes it on to the client
   function sendRaw(command, data, cb) {
 
