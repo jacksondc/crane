@@ -21,7 +21,7 @@ Crane currently supports players written in Python 3, JavaScript, and Java. For 
 ##Game
 Install with npm:
 
-```
+```bash
 npm install --save @jacksondc/crane
 ```
 
@@ -90,7 +90,7 @@ If you want to use a language that doesn't already have a client, you'll have to
 3. The client will receive one argument, the filename (without file extension) of its player. The client must then import this file and find its `respond` method.
 3. Each line is considered a message. If multiple lines are received at once, split them before processing.
 4. The first word (up to a space) of each message from the server is a unique message ID. The second word is a command. Anything after that is data.
-5. The first word of every response from the client is the same message ID. The second word is a status code: 200 for okay, 400 for error. Anything after that is data, which will be sent back to the game.
+5. The first word of every response from the client is the same message ID. The second word is a status code: 0 for okay, 1 for error. Anything after that is data, which will be sent back to the game.
 6. There is (currently) only one valid command, player, which may be followed by data. If there is data, it should be passed as an argument to the player's `respond()` method. Before sending data to the player, remove whitespace (especially newlines) from either side. Whatever `respond()` returns should be data in the client's response to the game.
 7. Clients can also send messages that are not responses to server messages, by replacing the first token (normally the id) with 'err' or 'log' (depending on the type of message). This is useful for debugging or for errors finding the player file before the first message arrives.
 

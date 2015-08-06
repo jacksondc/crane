@@ -64,16 +64,18 @@ var Player = function(playerName, shell) {
         var data      = dataSplit.length >= 3 ? dataSplit.slice(2).join(' ') : null;
 
         if(!pl.messageTable[messageId]) {
-            throw new Error('client response from ' + pl.getName() + ' with unrecognized message id ' + messageId);
+            throw new Error('client response from client for ' + pl.getName() + ' with unrecognized message id ' + messageId);
         }
 
         pl.messageTable[messageId].done = true;
 
-        if(parseInt(status) === 200) {
-            var callback = pl.messageTable[messageId].callback;
-            if(callback) { callback(data); }
+        if(parseInt(status) === 0) {
+          var callback = pl.messageTable[messageId].callback;
+          if(callback) { callback(data); }
+        } else if(parseInt(status) === 1) {
+          throw new Error('client response from ' + pl.getName() + ' with status ' + status + ' and error ' + data + '.');
         } else {
-            throw new Error('client response from ' + pl.getName() + ' with status ' + status + ' and error ' + data + '.');
+          throw new Error('client response from client for ' + pl.getName() + ' with unrecognized status code ' + status);
         }
 
       }

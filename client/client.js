@@ -65,11 +65,11 @@ function processLine(line) {
     if(command === 'player') {
       //send response from player
       if(respond) {
-        console.log(id + ' 200 ' + respond(data));
+        console.log(id + ' 0 ' + respond(data));
       } else {
-        console.log(id + ' 400 player-not-initialized');
+        console.log(id + ' 1 player-not-initialized');
       }
     } else {
-      console.log(id + ' ' + ' 400 unrecognized-command ' + command);
+      console.log(id + ' 1 unrecognized-command ' + command);
     }
 }

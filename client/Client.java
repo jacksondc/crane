@@ -70,16 +70,16 @@ public class Client {
 
         if(command.equals("player")) {
             if(player == null || respond == null) {
-              System.out.println(id + " 400 player-not-initialized");
+              System.out.println(id + " 1 player-not-initialized");
             } else {
               try {
-                System.out.println(id + " 200 " + respond.invoke(player, data));
+                System.out.println(id + " 0 " + respond.invoke(player, data));
               } catch(Exception ex) {
-                System.out.println(id + " 400 " + ex.toString());
+                System.out.println(id + " 1 " + ex.toString());
               }
             }
         } else {
-          System.out.println(id + " 400 unrecognized-command " + command);
+          System.out.println(id + " 1 unrecognized-command " + command);
         }
       }
     }

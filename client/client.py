@@ -48,8 +48,8 @@ if(success):
 
         if(command == 'player') :
             if(respond) :
-                print(messageId, '200', respond(data))
+                print(messageId, '0', respond(data))
             else :
-                print(messageId, '400', 'player-not-initialized')
+                print(messageId, '1', 'player-not-initialized')
         else :
-            print(messageId, '400', 'unrecognized-command', command);
+            print(messageId, '1', 'unrecognized-command', command);
