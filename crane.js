@@ -7,7 +7,8 @@ var spawn = require('child_process').spawn,
     path  = require('path'),
     uuid  = require('node-uuid'),
     async = require('async'),
-    _     = require('lodash');
+    _     = require('lodash'),
+    Table = require('cli-table');
 
 var playerDirectory = path.resolve(path.dirname(require.main.filename), './players');
 
@@ -206,15 +207,265 @@ module.exports.playAllMatches = function(players, numMatches, eachMatch, callbac
     async.eachSeries(matches, eachMatch, callback);
 };
 
+module.exports.playTournament = function(players, eachMatch, options) {
+  //default options
+  if(options.printTable === undefined) options.printTable = true;
+  if(options.numRounds === undefined) options.numRounds = 100;
+
+  var index = 0;
+  var matches = [];
+  for(var i = 0; i < players.length; i++) {
+    for(var j = i; j < players.length; j++) {
+      if(i !== j) { //don't play a bot against itself
+          for(var k = 0; k < options.numRounds; k++) {
+            matches.push({
+                players: _.shuffle([players[i], players[j]]),
+                index: ++index
+            });
+          }
+      }
+    }
+  }
+
+  async.mapSeries(matches, eachMatch, function(err, results) {
+
+    if(err) {
+      if(options.callback) options.callback(err);
+      else throw err;
+    }
+
+    var playerScores = {};
+
+    //set each player's starting score to 0
+    for(var i = 0; i < players.length; i++) {
+      playerScores[players[i].getName()] = 0;
+    }
+
+    //add in all the reported scores
+    for(var i = 0; i < results.length; i++) {
+      var match = matches[i];
+      var scores = results[i];
+      for(var j = 0; j < scores.length; j++) {
+        var score = scores[j];
+        var playerName = match.players[j].getName();
+        playerScores[playerName] += score;
+      }
+    }
+
+    //turn it into a table and sort
+    var scoreTable = []; //0: name, 1: score
+    for(var i = 0; i < players.length; i++) {
+      var score = playerScores[players[i].getName()];
+      var avgScore = score / options.numRounds;
+      scoreTable.push({
+          player: players[i],
+          score: score,
+          averageScore: avgScore
+        });
+    }
+
+    scoreTable = _.sortByOrder(scoreTable, 'score', 'desc');
+
+    //add ranks
+    for(var i = 0; i < scoreTable.length; i++) {
+      scoreTable[i].rank = (i+1); //start indices at 1
+    }
+
+    if(options.printTable) {
+      var SCORE_WIDTH = 10;
+
+      //copy into Table table
+      var table = new Table({
+          head: ['Rank', 'Player', 'Score', 'Avg Score'],
+          colWidths: [10, 20, SCORE_WIDTH + 2, SCORE_WIDTH + 2] // +2 because of cli-table (idk why)
+      });
+
+      _.each(scoreTable, function(row) {
+        table.push([
+          row.rank,
+          row.player.getName(),
+          rightAlignNum(Math.round(row.score), SCORE_WIDTH),
+          rightAlignNum(row.averageScore.toFixed(2), SCORE_WIDTH)
+        ]);
+      });
+
+      console.log(table.toString());
+      console.log(''); //newline
+    }
+
+    if(options.callback) {
+      options.callback(null, scoreTable);
+    }
+  });
+};
+
+function rightAlignNum(number, width, precision) {
+  number = number + "";
+  while(number.length < width) {
+    number = " " + number;
+  }
+  return number;
+}
+
 function getBaseLog(x, y) {
   return Math.log(y) / Math.log(x);
 }
 
-function nearestTwo(x) {
-  return Math.pow(2,Math.ceil(getBaseLog(2, x)));
+function twoByCeil(x) {
+  return Math.pow(2, Math.ceil(getBaseLog(2,x)));
 }
 
-module.exports.playTournament = function(players) {
-  var size = nearestTwo(players.length);
-  var numByes = size - players.length;
+var TreeNode = function(parent) {
+  this.parent = parent;
+  this.first = null;
+  this.second = null;
+  this.parentPosition = null;
+  this.value = null;
+};
+
+TreeNode.prototype.print = function(depth, maxDepth) {
+  var DEPTH_INCREMENT = 6;
+
+  if(!depth) {
+    //find deepest child
+    maxDepth = 0;
+    function getNextDepth(node, depth) {
+      if(depth > maxDepth) maxDepth = depth;
+      if(node.first) { getNextDepth(node.first, depth+1); }
+      if(node.second) { getNextDepth(node.second, depth+1); }
+    }
+    getNextDepth(this, 0);
+    depth = maxDepth * DEPTH_INCREMENT;
+  }
+
+
+  var indent = "";
+  for(var i = 0; i < depth; i++) indent += " ";
+  var bars = "";
+  for(var i = 0; i < (maxDepth-depth); i++) bars += "     |";
+
+  depth-=DEPTH_INCREMENT;
+
+  if(this.first) this.first.print(depth, maxDepth);
+
+  if(this.value === "BRANCH") console.log(indent + "|-----|");
+    else if(this.value.toString) console.log(indent + this.value.toString() + " ----|" + bars);
+    else console.log(indent + this.value);
+
+  if(this.second) this.second.print(depth, maxDepth);
+};
+
+module.exports.playBracket = function(players, eachMatch, options) {
+
+  //get seeds with a tournament
+  this.playTournament(players, eachMatch, {
+      numRounds: options && options.numSeedRounds,
+      printTable: false,
+      callback: theActualBracketPart
+    });
+
+  var theActualBracketPart = function(err, results) {
+    if(err) {
+      if(options.callback) options.callback(err);
+      else throw err;
+    }
+
+    var bigSize = twoByCeil(results.length);
+
+    //(results are guarranteed to be in order from playTournament)
+    var index = 0;
+    var seeds = _.map(results, function(pl) {
+      var node = new TreeNode(null);
+      pl.toString = function() { return this.rank + ": " + this.player.getName(); }
+      node.value = pl;
+      return node;
+    });
+    var seedPreserve = _.cloneDeep(seeds);
+
+    // FAKE FILLLER DATA
+    seeds = [];
+    for(var i = 0; i < 8; i++) {
+      var t = new TreeNode();
+      t.value = {
+        rank: i+1,
+        toString: function() {return this.rank;}
+      }
+      seeds.push( t );
+    }
+
+    var round = 0;
+    root = seeds.shift();
+    var next = root;
+
+    while(seeds.length) {
+
+      var roundLength = Math.pow(2, round);
+      var fillers = Math.max(0, Math.pow(2,round) - seeds.length);
+
+      var seedsForRound = [];
+
+      for(var i = 0; i < roundLength - fillers; i++) {
+        //insert at first position
+        //(put them in backwards order for correct insertion into tree)
+        seedsForRound.splice(0, 0, seeds.shift());
+      }
+
+      for(var i = 0; i < fillers; i++) {
+        //insert some fillers at the front
+        seedsForRound.splice(0, 0, null);
+      }
+
+      //do a round
+      for(var i = 0; i < roundLength; i++) {
+
+        var roundReferences = [];
+
+        var dropValue = next.value;
+        var opponentIndex = dropValue.rank - 1; //for 0-based
+
+        //if it's not a filler, drop it
+        if(seedsForRound[opponentIndex]) {
+
+          next.value = "BRANCH";
+
+          next.first = new TreeNode(next);
+          next.first.value = dropValue;
+          next.first.parentPosition = "first";
+
+          next.second = seedsForRound[opponentIndex];
+          next.second.parent = next;
+          next.second.parentPosition = "second";
+
+        }
+
+        //move next
+        if ( i === roundLength - 1 ) { //last round
+          next = root;
+          for(var j = 0; j < (round + 1); j++) {
+            next = next.first;
+          }
+        } else {
+          //go up the tree if necessary
+          var levelsUp = 0;
+          while(next.parentPosition === "second") {
+            levelsUp++
+            next = next.parent;
+          }
+
+          //we've gotten to a place where we're first - execute the move to second
+          next = next.parent.second;
+
+          //go back down the tree on the other side
+          for(var j = 0; j < levelsUp; j++) {
+            next = next.first;
+          }
+        }
+
+      }
+
+      round++;
+    }
+
+    root.print();
+  }
 };
