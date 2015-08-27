@@ -304,7 +304,6 @@ module.exports.playTournament = function(players, eachMatch, options) {
         var cumulativeScores = getScoreTable(players, getPlayerScores(players, cumulativeMatches, allResults), options.numRounds);
 
         if(areSignificant(players, allResults, cumulativeMatches, cumulativeScores, _.pick(options, 'numRandomizations', 'pValueThreshold'))) {
-          //console.log('resolving with matches ' + _.map(cumulativeMatches, function(match) { return _.map(match.players, function(pl) { return pl.getName(); }); }) + ' and results ' + results);
           resolveTournament(null, cumulativeMatches, allResults);
         } else {
           runOneRound( allResults );
@@ -328,18 +327,13 @@ module.exports.playTournament = function(players, eachMatch, options) {
       }
     });
 
-    async.mapSeries(matches, function(match, cb) {
-        eachMatch(match, function(err, res) {
-          cb(err, [match, res]);
-        });
-      }, resolveTournament);
+    async.mapSeries(matches, eachMatch, function(err, results) {
+        resolveTournament(err, matches, results);
+      });
 
   }
 
-  function resolveTournament(err, results) {
-
-    var matches = _.map(results, function(result) { return result[0]; });
-    var scores = _.map(results, function(result) { return result[1]; });
+  function resolveTournament(err, matches, scores) {
 
     if(err) {
       if(options.callback) options.callback(err);
