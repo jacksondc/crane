@@ -9,7 +9,7 @@ Put players in the `/players` directory. Each player must define the method `res
 
 ```js
 function respond(command) {
-  return (command === move) ? "rock" : "err";
+  return (command === "move") ? "rock" : "err";
 }
 ```
 
