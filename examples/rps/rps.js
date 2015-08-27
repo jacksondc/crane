@@ -1,19 +1,15 @@
-var game = require('../../crane');
+var crane = require('../../crane');
 var async = require('async');
 var _ = require('lodash');
 
-game.setTimeoutLength(500);
-
-var arguments = process.argv.slice(2);
-
-var players = game.readPlayers(arguments);
-
-//play every combination of matches
+// command-line arguments can be used to play only a subset
+// of players (e.g. node rps.js js-player.js python-player.py)
+var players = crane.readPlayers(process.argv.slice(2));
 
 function getWinnerString(scores, firstName, secondName) {
-  if(_.isEqual(scores, [0,0])) {
+  if(scores[0] === scores[1]) {
     return "It's a tie!";
-  } else if( _.isEqual(scores, [1,-1]) ) {
+  } else if(scores[0] > scores[1]) {
     return firstName + " wins!";
   } else {
     return secondName + " wins!";
@@ -36,7 +32,6 @@ function getScores(firstMove, secondMove) {
 }
 
 function playMatch(match, done) {
-    //each match
     var playerMoves = [];
 
     async.parallel([
@@ -67,8 +62,9 @@ function playMatch(match, done) {
 }
 
 //start it off
-game.playTournament(players, playMatch, {
+crane.playTournament(players, playMatch, {
   callback: function() {
     console.log('All done!');
+    process.exit(0);
   }
 });

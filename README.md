@@ -26,7 +26,6 @@ Require:
 
 ```js
 var crane = require('@jacksondc/crane');
-
 ```
 
 Call `readPlayers` to get a list of all players:
@@ -102,7 +101,7 @@ The `eachMatch` function accepts two arguments, a match object and a callback. T
 An example call to `playTournament` and possible output:
 
 ```js
-game.playTournament(game.readPlayers(), function(match, cb) {
+crane.playTournament(crane.readPlayers(), function(match, cb) {
   // ...
   cb(null, [1, -1]); //win for player 0
 }, {
