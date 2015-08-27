@@ -8,11 +8,11 @@ var players = crane.readPlayers(process.argv.slice(2));
 
 function getWinnerString(scores, firstName, secondName) {
   if(scores[0] === scores[1]) {
-    return "It's a tie!";
+    return 'It\'s a tie!';
   } else if(scores[0] > scores[1]) {
-    return firstName + " wins!";
+    return firstName + ' wins!';
   } else {
-    return secondName + " wins!";
+    return secondName + ' wins!';
   }
 }
 
@@ -22,9 +22,9 @@ function getScores(firstMove, secondMove) {
 
   if(firstMove === secondMove) {
     return [0,0];
-  } else if( (firstMove === "scissors" && secondMove == "paper"   ) ||
-             (firstMove === "rock"     && secondMove == "scissors") ||
-             (firstMove === "paper"    && secondMove == "rock"    ) ) {
+  } else if( (firstMove === 'scissors' && secondMove == 'paper'   ) ||
+             (firstMove === 'rock'     && secondMove == 'scissors') ||
+             (firstMove === 'paper'    && secondMove == 'rock'    ) ) {
     return [1,-1];
   } else {
     return [-1,1];

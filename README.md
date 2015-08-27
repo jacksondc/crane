@@ -9,7 +9,7 @@ Put players in the `/players` directory. Each player must define the method `res
 
 ```js
 function respond(command) {
-  return (command === "move") ? "rock" : "err";
+  return (command === 'move') ? 'rock' : 'err';
 }
 ```
 
@@ -37,7 +37,9 @@ var players = crane.readPlayers();
 Communicate with players using `send`:
 
 ```js
-var playerMove = players[0].send('move'); //rock
+players[0].send('move', function(move) {
+    console.log('first player picks %s', move);
+});
 ```
 
 For a full example, see the [rock paper scissors](https://github.com/jacksondc/crane/tree/master/examples/rps) game.
@@ -61,7 +63,7 @@ crane.setTimeoutLength(500); //wait half a second for responses
 Accepts a string message, which will be passed into the player's `respond` method as its only argument. Returns a string message returned by the `respond` method.
 
 ```js
-var response = player.send("move")
+var response = player.send('move');
 ```
 
 Messages are passed through stdin/stdout and aren't sanitized at all. Special characters or newlines will likely mess everything up. Whitespace is preserved as long as it doesn't start or end the message.
@@ -71,7 +73,7 @@ A player only needs to implement one method, `respond`, which accepts a single s
 
 ```js
 function respond(message) {
-  return "response";
+  return 'response';
 }
 ```
 
