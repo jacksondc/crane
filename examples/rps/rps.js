@@ -70,6 +70,5 @@ function playMatch(match, done) {
 game.playTournament(players, playMatch, {
   callback: function() {
     console.log('All done!');
-  },
-  numRounds: 5
+  }
 });
