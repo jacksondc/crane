@@ -86,13 +86,14 @@ Crane currently has clients for Python 3, JavaScript, and Java (it will recogniz
 Plays some number of matches between each player in the tournament and tallies up the results, which are passed to the callback and (optionally) printed in a table. Matches between the same combinations of players will be played back-to-back.
 
 **Arguments**
+
 1. `players`: An array of player objects (from `readPlayers`) to consider for games in the tournament
 2. `eachRound`: A function to execute each round
 3. `options.callback`: A callback to execute when the tournament is finished
 4. `options.rounds`: the number of times to play each combination of opponents against each other (default 100). Can also be set to `'UNTIL_SIGNIFICANT'`, which plays until the first-place player has a statistically-significant lead over the second-place player
 5. `options.numRandomizations`: the number of times to re-randomize score datasets in testing statistical significance (default 1000). Ignored unless `options.rounds` is set to `'UNTIL_SIGNIFICANT'`
-5. `options.pValueThreshold`: the probability of a random outcome of the a gap between the two leading players greater than or equal to the actual gap below which no more rounds will be played (default 0.05). Ignored unless `options.rounds` is set to `'UNTIL_SIGNIFICANT'`
-5. `options.printTable`: set to false to suppress table printing (default true)
+6. `options.pValueThreshold`: the probability of a random outcome of the a gap between the two leading players greater than or equal to the actual gap below which no more rounds will be played (default 0.05). Ignored unless `options.rounds` is set to `'UNTIL_SIGNIFICANT'`
+7. `options.printTable`: set to false to suppress table printing (default true)
 
 The `eachMatch` function accepts two arguments, a match object and a callback. The match object consists of a `players` array at `match.players` with all the participating players and a match number at `match.index` (an integer starting at one). The callback accepts two arguments: an error and a score array, where each score is for the player at the corresponding index of in the `players` array.
 
