@@ -177,19 +177,6 @@ module.exports.readPlayers = function(manualPlayersList) {
   return players;
 }
 
-function choose(set, number) {
-    //?
-}
-
-module.exports.play = function(callback, options) {
-    players = module.exports.readAllPlayers( options.players ? options.players : '' );
-    //for each combination of two players
-    combinations = choose(players, 2);
-    for(var i = 0; i < combinations.length; i++) {
-        callback(combinations);
-    }
-};
-
 module.exports.playAllMatches = function(players, numMatches, eachMatch, callback) {
     var index = 0;
     var matches = [];
@@ -207,64 +194,169 @@ module.exports.playAllMatches = function(players, numMatches, eachMatch, callbac
     async.eachSeries(matches, eachMatch, callback);
 };
 
-module.exports.playTournament = function(players, eachMatch, options) {
-  //default options
-  if(options.printTable === undefined) options.printTable = true;
-  if(options.numRounds === undefined) options.numRounds = 100;
-
-  var index = 0;
-  var matches = [];
+function forEachCombinationOfTwo(players, fn) {
   for(var i = 0; i < players.length; i++) {
     for(var j = i; j < players.length; j++) {
       if(i !== j) { //don't play a bot against itself
-          for(var k = 0; k < options.numRounds; k++) {
-            matches.push({
-                players: _.shuffle([players[i], players[j]]),
-                index: ++index
-            });
-          }
+          fn(players[i], players[j]);
       }
     }
   }
+}
 
-  async.mapSeries(matches, eachMatch, function(err, results) {
+function areSignificant(players, scores, matches, cumulativeScores, options) {
+
+  //first: 1st place, second: 2nd place
+  var first = cumulativeScores[0].score;
+  var second = cumulativeScores[1].score;
+  var realDifference = first - second;
+
+  var firstName = cumulativeScores[0].player.getName();
+  var secondName = cumulativeScores[1].player.getName();
+
+  var firstScores = [];
+  var secondScores = [];
+
+  // console.log('first place is ' + firstName);
+  // console.log('second place is ' + secondName);
+
+  for(var i = 0; i < scores.length; i++) {
+    var match = matches[i];
+    var firstPlayerIndex = _.findIndex(match.players, function(pl) { return pl.getName() === firstName; });
+    var secondPlayerIndex = _.findIndex(match.players, function(pl) { return pl.getName() === secondName; });
+    // console.log('all players are ' + JSON.stringify(_.map(match.players, function(pl) { return pl.getName(); })));
+    // console.log('first player is at ' + firstPlayerIndex);
+    // console.log('second player is at ' + secondPlayerIndex);
+    if(firstPlayerIndex >= 0) firstScores.push(scores[i][firstPlayerIndex]);
+    if(secondPlayerIndex >= 0) secondScores.push(scores[i][secondPlayerIndex]);
+  }
+
+  // console.log('realDifference: ' + realDifference);
+  // console.log('firstScores is ' + JSON.stringify(firstScores));
+  // console.log('secondScores is ' + JSON.stringify(secondScores));
+
+  var positives = 0; //real difference comes up by chance
+  var negatives = 0; //real difference does not come up by chance
+
+  for(var i = 0; i < options.numRandomizations; i++) {
+    //re-randomize
+    var allScores = _.shuffle(firstScores.concat(secondScores));
+    var groupA = allScores.slice(0, allScores.length / 2);
+    var groupB = allScores.slice(allScores.length / 2);
+    var sumA = _.sum(groupA);
+    var sumB = _.sum(groupB);
+    var difference = sumA - sumB;
+
+    //console.log('trial with difference ' + difference);
+
+    if(difference >= realDifference) positives++;
+      else negatives++;
+  }
+
+  var prob = positives / (positives + negatives);
+
+  // console.log(positives + ' positives and ' + negatives + ' negatives');
+
+  return prob < options.pValueThreshold;
+}
+
+module.exports.playTournament = function(players, eachMatch, options) {
+
+  //default options
+  if(options.printTable === undefined) options.printTable = true;
+  if(options.rounds === undefined) options.rounds = 100;
+  if(options.numRandomizations === undefined) options.numRandomizations = 1000;
+  if(options.pValueThreshold === undefined) options.pValueThreshold = 0.05;
+
+  if(options.rounds === 'UNTIL_SIGNIFICANT') {
+    var numRounds = 0;
+
+    if(!options.significanceThreshold) options.significanceThreshold = 0.05;
+
+    var cumulativeMatches = [];
+
+    var index = 0;
+
+    function runOneRound(results) {
+      numRounds++;
+
+      var currentMatches = [];
+
+      forEachCombinationOfTwo(players, function(playerA, playerB) {
+        var match = {
+            players: _.shuffle([playerA, playerB]),
+            index: ++index
+        };
+        currentMatches.push(match);
+        cumulativeMatches.push(match);
+      });
+
+      async.mapSeries(currentMatches, eachMatch, function(err, newResults) {
+        var allResults = results.concat(newResults);
+
+        // console.log('finished a round with cumulative results ' + JSON.stringify(allResults));
+
+        if(err) {
+          if(options.callback) options.callback(err);
+          else throw err;
+        }
+
+        var cumulativeScores = getScoreTable(players, getPlayerScores(players, cumulativeMatches, allResults), options.numRounds);
+
+        if(areSignificant(players, allResults, cumulativeMatches, cumulativeScores, _.pick(options, 'numRandomizations', 'pValueThreshold'))) {
+          //console.log('resolving with matches ' + _.map(cumulativeMatches, function(match) { return _.map(match.players, function(pl) { return pl.getName(); }); }) + ' and results ' + results);
+          resolveTournament(null, cumulativeMatches, allResults);
+        } else {
+          runOneRound( allResults );
+        }
+
+      });
+    }
+
+    runOneRound([]);
+
+  } else {
+
+    var index = 0;
+    var matches = [];
+    forEachCombinationOfTwo(players, function(playerA, playerB) {
+      for(var k = 0; k < options.rounds; k++) {
+        matches.push({
+            players: _.shuffle([playerA, playerB]),
+            index: ++index
+        });
+      }
+    });
+
+    async.mapSeries(matches, function(match, cb) {
+        eachMatch(match, function(err, res) {
+          cb(err, [match, res]);
+        });
+      }, resolveTournament);
+
+  }
+
+  function resolveTournament(err, results) {
+
+    var matches = _.map(results, function(result) { return result[0]; });
+    var scores = _.map(results, function(result) { return result[1]; });
 
     if(err) {
       if(options.callback) options.callback(err);
       else throw err;
     }
 
-    var playerScores = {};
+    var playerScores = getPlayerScores(players, matches, scores);
 
-    //set each player's starting score to 0
-    for(var i = 0; i < players.length; i++) {
-      playerScores[players[i].getName()] = 0;
-    }
+    var index = 0;
 
-    //add in all the reported scores
-    for(var i = 0; i < results.length; i++) {
-      var match = matches[i];
-      var scores = results[i];
-      for(var j = 0; j < scores.length; j++) {
-        var score = scores[j];
-        var playerName = match.players[j].getName();
-        playerScores[playerName] += score;
-      }
-    }
+    // console.log('results is ' + _.map(results, function(res) { return '(' + res + ', ' + _.map(names(matches[index++].players)) + ')'}));
+
+    // console.log('player scores is ' + JSON.stringify(playerScores));
 
     //turn it into a table and sort
-    var scoreTable = []; //0: name, 1: score
-    for(var i = 0; i < players.length; i++) {
-      var score = playerScores[players[i].getName()];
-      var avgScore = score / options.numRounds;
-      scoreTable.push({
-          player: players[i],
-          score: score,
-          averageScore: avgScore
-        });
-    }
-
-    scoreTable = _.sortByOrder(scoreTable, 'score', 'desc');
+    var robustNumRounds = options.rounds === 'UNTIL_SIGNIFICANT' ? numRounds : options.rounds;
+    var scoreTable = getScoreTable(players, playerScores, robustNumRounds);
 
     //add ranks
     for(var i = 0; i < scoreTable.length; i++) {
@@ -296,8 +388,50 @@ module.exports.playTournament = function(players, eachMatch, options) {
     if(options.callback) {
       options.callback(null, scoreTable);
     }
-  });
+  }
 };
+
+
+function getScoreTable(players, playerScores, numRounds) {
+  var scoreTable = [];
+
+  for(var i = 0; i < players.length; i++) {
+    var score = playerScores[players[i].getName()];
+    var avgScore = score / numRounds;
+    scoreTable.push({
+        player: players[i],
+        score: score,
+        averageScore: avgScore
+      });
+  }
+
+  scoreTable = _.sortByOrder(scoreTable, 'score', 'desc');
+
+  return scoreTable;
+}
+
+function getPlayerScores(players, matches, results) {
+
+  var playerScores = {};
+
+  //set each player's starting score to 0
+  for(var i = 0; i < players.length; i++) {
+    playerScores[players[i].getName()] = 0;
+  }
+
+  //add in all the reported scores
+  for(var i = 0; i < results.length; i++) {
+    var match = matches[i];
+    var scores = results[i];
+    for(var j = 0; j < scores.length; j++) {
+      var score = scores[j];
+      var playerName = match.players[j].getName();
+      playerScores[playerName] += score;
+    }
+  }
+
+  return playerScores;
+}
 
 function rightAlignNum(number, width, precision) {
   number = number + "";
@@ -469,3 +603,7 @@ module.exports.playBracket = function(players, eachMatch, options) {
     root.print();
   }
 };
+
+function names(players) {
+  return _.map(players, function(pl) { return pl.getName(); });
+}
